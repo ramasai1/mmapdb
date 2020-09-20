@@ -3,7 +3,8 @@
 
 #include "types.hpp"
 
-void execute_create(CreateStatement create_stmt);
-void execute_select(SelectStatement select_stmt);
+void execute_create(CreateStatement);
+void execute_insert(InsertStatement);
+void execute_select(SelectStatement);
 
 #endif

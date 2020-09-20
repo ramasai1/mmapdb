@@ -25,7 +25,31 @@ class CreateStatement {
   }
 };
 
-class InsertStatement {};
+class InsertStatement {
+  std::string table_name;
+  std::vector<std::vector<std::string>> tuples;
+
+ public:
+  InsertStatement(std::string table_name,
+                  std::map<std::string, std::vector<std::string>>)
+      : table_name(table_name),
+        tuples(std::vector<std::vector<std::string>>()){};
+
+  InsertStatement()
+      : table_name(""), tuples(std::vector<std::vector<std::string>>()){};
+
+  std::string get_table_name() const { return table_name; }
+
+  void set_table_name(const std::string &table_name) {
+    this->table_name = table_name;
+  }
+
+  void add_tuple(const std::vector<std::string> &tuple) {
+    tuples.push_back(tuple);
+  }
+
+  std::vector<std::vector<std::string>> &get_tuples() { return tuples; }
+};
 
 class SelectStatement {
   std::string table_name;
