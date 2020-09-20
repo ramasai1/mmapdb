@@ -1,5 +1,6 @@
 #include "parse.hpp"
 
+// `create table t (id int, name string)`
 CreateStatement parse_create(const std::string &create_stmt) {
   CreateStatement response;
   std::string token = "";
@@ -48,6 +49,7 @@ CreateStatement parse_create(const std::string &create_stmt) {
   return response;
 }
 
+// `select id(, ...) from table`
 SelectStatement parse_select(const std::string &select_stmt) {
   SelectStatement response;
   std::string token = "";
@@ -65,6 +67,61 @@ SelectStatement parse_select(const std::string &select_stmt) {
     }
   }
   response.set_table_name(token);
+
+  return response;
+}
+
+// `insert into t (1, samuel), (2, harry)`
+InsertStatement parse_insert(const std::string &insert_stmt) {
+  InsertStatement response;
+  std::string token;
+  unsigned int idx = 0;
+  bool inside_attr = false, table_name_set = false;
+
+  while (idx < insert_stmt.size()) {
+    if (inside_attr) {
+      std::vector<std::string> tuple;
+      while (idx < insert_stmt.size() && insert_stmt[idx] != ')') {
+        if (std::isblank(insert_stmt[idx])) {
+          idx++;
+        } else if (insert_stmt[idx] == ',') {
+          tuple.push_back(token);
+          token = "";
+          idx++;
+        } else {
+          token += insert_stmt[idx++];
+        }
+      }
+      tuple.push_back(token);
+      response.add_tuple(tuple);
+      inside_attr = false;
+      token = "";
+      idx++;
+    } else {
+      if (std::isblank(insert_stmt[idx])) {
+        idx++;
+        if (token != "into") {
+          response.set_table_name(token);
+          table_name_set = true;
+        }
+        token = "";
+      } else if (insert_stmt[idx] == ',' || table_name_set) {
+        if (insert_stmt[idx] == ',') {
+          idx++;
+        }
+        while (std::isblank(insert_stmt[idx])) {
+          idx++;
+        }
+        if (insert_stmt[idx] == '(') {
+          idx++;
+          token = "";
+          inside_attr = true;
+        }
+      } else {
+        token += insert_stmt[idx++];
+      }
+    }
+  }
 
   return response;
 }

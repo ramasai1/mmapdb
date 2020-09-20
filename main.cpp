@@ -8,7 +8,7 @@ int main() {
 
   std::cout << "> ";
   while (std::getline(std::cin, line)) {
-    if (line == "exit") {
+    if (line == "exit" or line == "q" or line == "quit") {
       break;
     }
     std::pair<std::string, int> stmt_name_and_limitidx =
@@ -20,12 +20,14 @@ int main() {
         execute_create(parse_create(stmt_after_clause));
         break;
       case StatementType::INSERT:
+        execute_insert(parse_insert(stmt_after_clause));
         break;
       case StatementType::SELECT:
         execute_select(parse_select(stmt_after_clause));
         break;
       case StatementType::INVALID:
-        std::cout << "unrecognized command" << std::endl;
+        std::cout << "unrecognized command: " << stmt_name_and_limitidx.first
+                  << std::endl;
         break;
     }
     std::cout << "> ";
