@@ -22,6 +22,17 @@ static bool file_exists(const std::string &filename) {
   return stat(filename.c_str(), &buffer) == 0;
 }
 
+static int round_down_to_pagesize(const int &file_size) {
+  int page_size = getpagesize();
+  int remainder = file_size % page_size;
+
+  if (remainder == 0) {
+    return file_size;
+  }
+
+  return file_size - remainder;
+}
+
 void execute_create(CreateStatement create_stmt) {
   int metadata_fd, table_fd;
   std::map<std::string, std::string> &schema = create_stmt.get_mappings();
@@ -111,9 +122,12 @@ void execute_insert(InsertStatement insert_stmt) {
   }
   check_errors(ftruncate(fd, db_fileinfo.st_size + textsize) < 0,
                "Unable to extend file size while inserting values");
-  mapped = (char *)mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  int offset = round_down_to_pagesize(db_fileinfo.st_size);
+  mapped =
+      (char *)mmap(0, textsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
   check_errors(mapped == MAP_FAILED,
                "Unable to mmap() db file while inserting values");
+  mapped_idx = db_fileinfo.st_size;
   for (auto &tuple : tuples) {
     for (unsigned int tuple_idx = 0; tuple_idx < tuple.size(); tuple_idx++) {
       std::string attribute = tuple[tuple_idx];
