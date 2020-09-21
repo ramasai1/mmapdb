@@ -10,57 +10,11 @@
 #include <iostream>
 #include <sstream>
 
-static void check_errors(const bool &invalid, const std::string &msg) {
-  if (invalid) {
-    std::cout << msg << std::endl;
-    exit(-1);
-  }
-}
-
-static bool file_exists(const std::string &filename) {
-  struct stat buffer;
-
-  return stat(filename.c_str(), &buffer) == 0;
-}
-
-static int round_down_to_pagesize(const int &file_size) {
-  int page_size = getpagesize();
-  int remainder = file_size % page_size;
-
-  if (remainder == 0) {
-    return file_size;
-  }
-
-  return file_size - remainder;
-}
-
-static std::vector<std::string> tokenize(const std::string &str) {
-  std::stringstream ss(str);
-  char delim = ',';
-  std::string token;
-  std::vector<std::string> tokens;
-
-  while (std::getline(ss, token, delim)) {
-    if (!token.empty() && token[token.size() - 1] == '\n') {
-      token.erase(token.length() - 1);
-    }
-    tokens.push_back(token);
-  }
-
-  return tokens;
-}
-
-static std::map<std::string, int> get_row_layout_on_disk(
-    const std::string &layout) {
-  int idx = 0;
-  std::map<std::string, int> attribute_to_col_idx;
-
-  for (auto &token : tokenize(layout)) {
-    attribute_to_col_idx[token] = idx++;
-  }
-
-  return attribute_to_col_idx;
-}
+static void check_errors(const bool &, const std::string &);
+static bool file_exists(const std::string &);
+static int round_down_to_pagesize(const int &);
+static std::vector<std::string> tokenize(const std::string &);
+static std::map<std::string, int> get_row_layout_on_disk(const std::string &);
 
 void execute_create(CreateStatement create_stmt) {
   int metadata_fd, table_fd;
@@ -235,4 +189,56 @@ void execute_select(SelectStatement select_stmt) {
   check_errors(munmap(mapped, db_fileinfo.st_size) < 0,
                "Unable to close mapped file after selecting");
   check_errors(close(fd) < 0, "Unable to close file after reading");
+}
+
+static void check_errors(const bool &invalid, const std::string &msg) {
+  if (invalid) {
+    std::cout << msg << std::endl;
+    exit(-1);
+  }
+}
+
+static bool file_exists(const std::string &filename) {
+  struct stat buffer;
+
+  return stat(filename.c_str(), &buffer) == 0;
+}
+
+static int round_down_to_pagesize(const int &file_size) {
+  int page_size = getpagesize();
+  int remainder = file_size % page_size;
+
+  if (remainder == 0) {
+    return file_size;
+  }
+
+  return file_size - remainder;
+}
+
+static std::map<std::string, int> get_row_layout_on_disk(
+    const std::string &layout) {
+  int idx = 0;
+  std::map<std::string, int> attribute_to_col_idx;
+
+  for (auto &token : tokenize(layout)) {
+    attribute_to_col_idx[token] = idx++;
+  }
+
+  return attribute_to_col_idx;
+}
+
+static std::vector<std::string> tokenize(const std::string &str) {
+  std::stringstream ss(str);
+  char delim = ',';
+  std::string token;
+  std::vector<std::string> tokens;
+
+  while (std::getline(ss, token, delim)) {
+    if (!token.empty() && token[token.size() - 1] == '\n') {
+      token.erase(token.length() - 1);
+    }
+    tokens.push_back(token);
+  }
+
+  return tokens;
 }

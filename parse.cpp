@@ -15,13 +15,13 @@ CreateStatement parse_create(const std::string &create_stmt) {
         if (create_stmt[idx] == ',' || create_stmt[idx] == ')') {
           idx++;
           response.add_mapping(colname, datatype);
-          while (idx < create_stmt.size() and std::isblank(create_stmt[idx])) {
+          while (idx < create_stmt.size() && std::isblank(create_stmt[idx])) {
             idx++;
           }
           space_seen = false;
           datatype = colname = "";
         } else {
-          while (idx < create_stmt.size() and std::isblank(create_stmt[idx])) {
+          while (idx < create_stmt.size() && std::isblank(create_stmt[idx])) {
             idx++;
             space_seen = true;
           }

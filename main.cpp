@@ -1,6 +1,15 @@
-#include "main.hpp"
-
 #include <iostream>
+
+#include "execute.hpp"
+#include "parse.hpp"
+
+enum class StatementType { CREATE, INSERT, SELECT, INVALID };
+
+static std::pair<std::string, int> parse_stmt_name_and_limitidx(
+    const std::string &);
+static std::map<std::string, StatementType> map_stmt_str_to_type();
+static StatementType get_stmt_type_from_str(
+    const std::string &, std::map<std::string, StatementType> &);
 
 int main() {
   std::string line;
@@ -36,7 +45,16 @@ int main() {
   return 0;
 }
 
-std::pair<std::string, int> parse_stmt_name_and_limitidx(
+static std::map<std::string, StatementType> map_stmt_str_to_type() {
+  std::map<std::string, StatementType> stmt_to_type = {
+      {"create", StatementType::CREATE},
+      {"insert", StatementType::INSERT},
+      {"select", StatementType::SELECT}};
+
+  return std::move(stmt_to_type);
+}
+
+static std::pair<std::string, int> parse_stmt_name_and_limitidx(
     const std::string &stmt) {
   int idx = 0;
   std::string keyword = "";
@@ -48,16 +66,7 @@ std::pair<std::string, int> parse_stmt_name_and_limitidx(
   return std::move(make_pair(keyword, idx + 1));
 }
 
-std::map<std::string, StatementType> map_stmt_str_to_type() {
-  std::map<std::string, StatementType> stmt_to_type = {
-      {"create", StatementType::CREATE},
-      {"insert", StatementType::INSERT},
-      {"select", StatementType::SELECT}};
-
-  return std::move(stmt_to_type);
-}
-
-StatementType get_stmt_type_from_str(
+static StatementType get_stmt_type_from_str(
     const std::string &clause,
     std::map<std::string, StatementType> &clause_to_type) {
   if (clause_to_type.find(clause) == clause_to_type.end()) {

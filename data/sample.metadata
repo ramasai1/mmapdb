@@ -1,0 +1,4 @@
+id,name,registered
+id:int
+name:string
+registered:bool
