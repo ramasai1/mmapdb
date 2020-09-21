@@ -54,13 +54,18 @@ class InsertStatement {
 class SelectStatement {
   std::string table_name;
   std::vector<std::string> attributes;
+  bool select_all;
 
  public:
   SelectStatement(std::string table_name, std::vector<std::string> attributes)
-      : table_name(table_name), attributes(attributes){};
+      : table_name(table_name), attributes(attributes), select_all(false){};
 
-  SelectStatement() : table_name(""), attributes(std::vector<std::string>()){};
+  SelectStatement()
+      : table_name(""),
+        attributes(std::vector<std::string>()),
+        select_all(false){};
 
+  std::string get_table_name() const { return table_name; }
   void set_table_name(const std::string &table_name) {
     this->table_name = table_name;
   }
@@ -68,6 +73,12 @@ class SelectStatement {
   void add_attribute(const std::string &attribute) {
     this->attributes.push_back(attribute);
   }
+
+  std::vector<std::string> &get_attributes() { return attributes; }
+
+  void set_select_all(const bool &select_all) { this->select_all = select_all; }
+
+  const bool &get_select_all() const { return select_all; }
 };
 
 #endif

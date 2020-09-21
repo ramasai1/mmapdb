@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 static void check_errors(const bool &invalid, const std::string &msg) {
   if (invalid) {
@@ -31,6 +32,34 @@ static int round_down_to_pagesize(const int &file_size) {
   }
 
   return file_size - remainder;
+}
+
+static std::vector<std::string> tokenize(const std::string &str) {
+  std::stringstream ss(str);
+  char delim = ',';
+  std::string token;
+  std::vector<std::string> tokens;
+
+  while (std::getline(ss, token, delim)) {
+    if (!token.empty() && token[token.size() - 1] == '\n') {
+      token.erase(token.length() - 1);
+    }
+    tokens.push_back(token);
+  }
+
+  return tokens;
+}
+
+static std::map<std::string, int> get_row_layout_on_disk(
+    const std::string &layout) {
+  int idx = 0;
+  std::map<std::string, int> attribute_to_col_idx;
+
+  for (auto &token : tokenize(layout)) {
+    attribute_to_col_idx[token] = idx++;
+  }
+
+  return attribute_to_col_idx;
 }
 
 void execute_create(CreateStatement create_stmt) {
@@ -149,4 +178,61 @@ void execute_insert(InsertStatement insert_stmt) {
   check_errors(close(fd) < 0, "Unable to close db file after inserting");
 }
 
-void execute_select(SelectStatement select_stmt) {}
+void execute_select(SelectStatement select_stmt) {
+  std::string db_filename = "data/" + select_stmt.get_table_name() + ".db";
+  std::string metadata_filename =
+      "data/" + select_stmt.get_table_name() + ".metadata";
+
+  check_errors(!file_exists(db_filename),
+               "table: " + select_stmt.get_table_name() + " does not exist.");
+  int fd;
+  size_t sz = 0;
+  struct stat db_fileinfo;
+  char *mapped, *line;
+  FILE *stream;
+
+  // get order of row layout on disk.
+  fd = open(metadata_filename.c_str(), O_RDONLY);
+  check_errors(fd < 0, "Unable to open metadata file to get row layout.");
+  stream = fdopen(fd, "r");
+  check_errors(stream == NULL, "Unable to open stream to read metadata");
+  getline(&line, &sz, stream);
+  check_errors(fclose(stream) == EOF,
+               "Unable to close stream after reading row layout");
+
+  // mmap() DB file.
+  fd = open(db_filename.c_str(), O_RDONLY);
+  check_errors(fd < 0, "Unable to open db file to read values.");
+  check_errors(fstat(fd, &db_fileinfo) < 0, "Unable to stat db file to read");
+  mapped = (char *)mmap(0, db_fileinfo.st_size, PROT_READ, MAP_SHARED, fd, 0);
+  check_errors(mapped == MAP_FAILED,
+               "mmap failed while reading DB to select values");
+
+  // print out contents of each row.
+  db_row_buffer buffer(mapped, db_fileinfo.st_size);
+  std::istream db_row_stream(&buffer);
+  std::string row;
+  bool select_all_rows = select_stmt.get_select_all();
+  std::map<std::string, int> attribute_to_col_idx =
+      get_row_layout_on_disk(std::string(line));
+  std::vector<std::string> &desired_attributes = select_stmt.get_attributes();
+
+  while (std::getline(db_row_stream, row)) {
+    std::vector<std::string> all_attributes = tokenize(row);
+    if (!select_all_rows) {
+      for (auto &desired_attribute : desired_attributes) {
+        std::cout << all_attributes[attribute_to_col_idx[desired_attribute]]
+                  << '\t';
+      }
+    } else {
+      for (auto &attribute : all_attributes) {
+        std::cout << attribute << '\t';
+      }
+    }
+    std::cout << std::endl;
+  }
+
+  check_errors(munmap(mapped, db_fileinfo.st_size) < 0,
+               "Unable to close mapped file after selecting");
+  check_errors(close(fd) < 0, "Unable to close file after reading");
+}

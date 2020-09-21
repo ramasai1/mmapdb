@@ -59,6 +59,9 @@ SelectStatement parse_select(const std::string &select_stmt) {
     if (select_stmt[idx] == ',' || std::isblank(select_stmt[idx])) {
       if (!token.empty() && token != "from") {
         response.add_attribute(token);
+        if (token == "*") {
+          response.set_select_all(true);
+        }
       }
       idx++;
       token = "";
