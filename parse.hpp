@@ -1,10 +1,19 @@
 #ifndef PARSE
 #define PARSE
 
+#include "lexer.hpp"
 #include "types.hpp"
 
-CreateStatement parse_create(const std::string &);
-InsertStatement parse_insert(const std::string &);
-SelectStatement parse_select(const std::string &);
+class Parser {
+ public:
+  ~Parser() = default;
+
+  Statement* parse(Lexer&);
+  CreateStatement* parse_create(Lexer&);
+  InsertStatement* parse_insert(Lexer&);
+  SelectStatement* parse_select(Lexer&);
+  std::vector<std::pair<std::string, Token>> parse_until(Lexer&, const Token&,
+                                                         const Token&);
+};
 
 #endif
