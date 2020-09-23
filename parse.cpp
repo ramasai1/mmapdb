@@ -1,130 +1,77 @@
 #include "parse.hpp"
 
-// `create table t (id int, name string)`
-CreateStatement parse_create(const std::string &create_stmt) {
-  CreateStatement response;
-  std::string token = "";
-  unsigned int idx = 0;
+#include <assert.h>
 
-  while (idx < create_stmt.size()) {
-    if (create_stmt[idx] == '(') {
-      std::string colname = "", datatype = "";
-      bool space_seen = false;
-      idx++;
-      while (idx < create_stmt.size()) {
-        if (create_stmt[idx] == ',' || create_stmt[idx] == ')') {
-          idx++;
-          response.add_mapping(colname, datatype);
-          while (idx < create_stmt.size() && std::isblank(create_stmt[idx])) {
-            idx++;
-          }
-          space_seen = false;
-          datatype = colname = "";
-        } else {
-          while (idx < create_stmt.size() && std::isblank(create_stmt[idx])) {
-            idx++;
-            space_seen = true;
-          }
+#include <stdexcept>
 
-          if (space_seen) {
-            datatype += create_stmt[idx++];
-          } else {
-            colname += create_stmt[idx++];
-          }
-        }
-      }
-    } else {
-      if (std::isblank(create_stmt[idx])) {
-        if (token != "table") {
-          response.set_table_name(token);
-        }
-        idx++;
-        token = "";
-      } else {
-        token += create_stmt[idx++];
-      }
-    }
+Statement* Parser::parse(Lexer& lexer) {
+  std::pair<std::string, Token> token = lexer.get_curr_token();
+
+  switch (token.second) {
+    case Token::CREATE:
+      return parse_create(lexer);
+      break;
+    case Token::INSERT:
+      return parse_insert(lexer);
+      break;
+    case Token::SELECT:
+      return parse_select(lexer);
+      break;
+    default:
+      return nullptr;
+      break;
   }
-
-  return response;
 }
 
-// `select id(, ...) from table`
-SelectStatement parse_select(const std::string &select_stmt) {
-  SelectStatement response;
-  std::string token = "";
-  unsigned int idx = 0;
+CreateStatement* Parser::parse_create(Lexer& lexer) {
+  CreateStatement* stmt = new CreateStatement{};
+  std::pair<std::string, Token> token;
 
-  while (idx != select_stmt.size()) {
-    if (select_stmt[idx] == ',' || std::isblank(select_stmt[idx])) {
-      if (!token.empty() && token != "from") {
-        response.add_attribute(token);
-        if (token == "*") {
-          response.set_select_all(true);
-        }
-      }
-      idx++;
-      token = "";
-    } else {
-      token += select_stmt[idx++];
-    }
+  // grab table name.
+  while (lexer.has_next_token() &&
+         (token = lexer.get_curr_token()).second != Token::IDENTIFIER)
+    ;
+  if (lexer.get_prev_token().second != Token::TABLE) {
+    throw std::invalid_argument(
+        "Malformed \"create\" query, expected \"table\" before table name.");
   }
-  response.set_table_name(token);
+  stmt->set_table_name(token.first);
+  // skip over "values" keyword and "("
+  token = lexer.get_curr_token();
+  if (token.second != Token::LPAREN) {
+    throw std::invalid_argument(
+        "Malformed \"create\" query, expected ( after \"values\".");
+  }
 
-  return response;
+  // parse values in the statement.
+  while (lexer.has_next_token()) {
+    std::vector<std::pair<std::string, Token>> value =
+        parse_until(lexer, Token::COMMA, Token::RPAREN);
+    if (value.size() != 2) {
+      throw std::invalid_argument(
+          "Malformed\"create\" query, too many keywords specified.");
+    }
+    stmt->add_mapping(value[0].first, value[1].first);
+  }
+
+  return stmt;
 }
 
-// `insert into t (1, samuel), (2, harry)`
-InsertStatement parse_insert(const std::string &insert_stmt) {
-  InsertStatement response;
-  std::string token;
-  unsigned int idx = 0;
-  bool inside_attr = false, table_name_set = false;
+InsertStatement* Parser::parse_insert(Lexer& lexer) { return nullptr; }
 
-  while (idx < insert_stmt.size()) {
-    if (inside_attr) {
-      std::vector<std::string> tuple;
-      while (idx < insert_stmt.size() && insert_stmt[idx] != ')') {
-        if (std::isblank(insert_stmt[idx])) {
-          idx++;
-        } else if (insert_stmt[idx] == ',') {
-          tuple.push_back(token);
-          token = "";
-          idx++;
-        } else {
-          token += insert_stmt[idx++];
-        }
-      }
-      tuple.push_back(token);
-      response.add_tuple(tuple);
-      inside_attr = false;
-      token = "";
-      idx++;
-    } else {
-      if (std::isblank(insert_stmt[idx])) {
-        idx++;
-        if (token != "into") {
-          response.set_table_name(token);
-          table_name_set = true;
-        }
-        token = "";
-      } else if (insert_stmt[idx] == ',' || table_name_set) {
-        if (insert_stmt[idx] == ',') {
-          idx++;
-        }
-        while (std::isblank(insert_stmt[idx])) {
-          idx++;
-        }
-        if (insert_stmt[idx] == '(') {
-          idx++;
-          token = "";
-          inside_attr = true;
-        }
-      } else {
-        token += insert_stmt[idx++];
-      }
+SelectStatement* Parser::parse_select(Lexer& lexer) { return nullptr; }
+
+std::vector<std::pair<std::string, Token>> Parser::parse_until(
+    Lexer& lexer, const Token& t1, const Token& t2) {
+  std::vector<std::pair<std::string, Token>> tokens;
+
+  while (lexer.has_next_token()) {
+    std::pair<std::string, Token> token = lexer.get_curr_token();
+    if (token.second == t1 || token.second == t2) {
+      return std::move(tokens);
     }
+    tokens.push_back(std::move(token));
   }
 
-  return response;
+  throw std::invalid_argument("Malformed query.");
 }

@@ -10,22 +10,22 @@
 #include <iostream>
 #include <sstream>
 
-static void check_errors(const bool &, const std::string &);
+static void inline check_errors(const bool &, const std::string &);
 static bool file_exists(const std::string &);
-static int round_down_to_pagesize(const int &);
+static int inline round_down_to_pagesize(const int &);
 static std::vector<std::string> tokenize(const std::string &);
 static std::map<std::string, int> get_row_layout_on_disk(const std::string &);
 
-void execute_create(CreateStatement create_stmt) {
+void CreateStatement::execute() {
   int metadata_fd, table_fd;
-  std::map<std::string, std::string> &schema = create_stmt.get_mappings();
+  std::map<std::string, std::string> &schema = this->get_mappings();
   int textsize = 0, mapped_idx = 0;
   std::string metadata_filename =
-      "data/" + create_stmt.get_table_name() + ".metadata";
-  std::string db_filename = "data/" + create_stmt.get_table_name() + ".db";
+      "data/" + this->get_table_name() + ".metadata";
+  std::string db_filename = "data/" + this->get_table_name() + ".db";
 
   if (file_exists(metadata_filename)) {
-    std::cout << "table " + create_stmt.get_table_name() + " already exists."
+    std::cout << "table " + this->get_table_name() + " already exists."
               << std::endl;
     return;
   }
@@ -82,17 +82,17 @@ void execute_create(CreateStatement create_stmt) {
   close(table_fd);
 }
 
-void execute_insert(InsertStatement insert_stmt) {
-  std::string db_filename = "data/" + insert_stmt.get_table_name() + ".db";
+void InsertStatement::execute() {
+  std::string db_filename = "data/" + this->get_table_name() + ".db";
 
   if (!file_exists(db_filename)) {
-    check_errors(true, "table with name: " + insert_stmt.get_table_name() +
-                           " does not exist");
+    check_errors(
+        true, "table with name: " + this->get_table_name() + " does not exist");
   }
 
   struct stat db_fileinfo = {0};
   int fd, textsize = 0, mapped_idx = 0;
-  std::vector<std::vector<std::string>> &tuples = insert_stmt.get_tuples();
+  std::vector<std::vector<std::string>> &tuples = this->get_tuples();
   char *mapped;
 
   fd = open(db_filename.c_str(), O_RDWR);
@@ -132,13 +132,13 @@ void execute_insert(InsertStatement insert_stmt) {
   check_errors(close(fd) < 0, "Unable to close db file after inserting");
 }
 
-void execute_select(SelectStatement select_stmt) {
-  std::string db_filename = "data/" + select_stmt.get_table_name() + ".db";
+void SelectStatement::execute() {
+  std::string db_filename = "data/" + this->get_table_name() + ".db";
   std::string metadata_filename =
-      "data/" + select_stmt.get_table_name() + ".metadata";
+      "data/" + this->get_table_name() + ".metadata";
 
   check_errors(!file_exists(db_filename),
-               "table: " + select_stmt.get_table_name() + " does not exist.");
+               "table: " + this->get_table_name() + " does not exist.");
   int fd;
   size_t sz = 0;
   struct stat db_fileinfo;
@@ -166,10 +166,10 @@ void execute_select(SelectStatement select_stmt) {
   db_row_buffer buffer(mapped, db_fileinfo.st_size);
   std::istream db_row_stream(&buffer);
   std::string row;
-  bool select_all_rows = select_stmt.get_select_all();
+  bool select_all_rows = this->get_select_all();
   std::map<std::string, int> attribute_to_col_idx =
       get_row_layout_on_disk(std::string(line));
-  std::vector<std::string> &desired_attributes = select_stmt.get_attributes();
+  std::vector<std::string> &desired_attributes = this->get_attributes();
 
   while (std::getline(db_row_stream, row)) {
     std::vector<std::string> all_attributes = tokenize(row);
@@ -191,7 +191,7 @@ void execute_select(SelectStatement select_stmt) {
   check_errors(close(fd) < 0, "Unable to close file after reading");
 }
 
-static void check_errors(const bool &invalid, const std::string &msg) {
+static void inline check_errors(const bool &invalid, const std::string &msg) {
   if (invalid) {
     std::cout << msg << std::endl;
     exit(-1);
@@ -204,7 +204,7 @@ static bool file_exists(const std::string &filename) {
   return stat(filename.c_str(), &buffer) == 0;
 }
 
-static int round_down_to_pagesize(const int &file_size) {
+static int inline round_down_to_pagesize(const int &file_size) {
   int page_size = getpagesize();
   int remainder = file_size % page_size;
 
