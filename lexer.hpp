@@ -17,6 +17,7 @@ class Lexer {
       {"from", Token::FROM},
       {"into", Token::INTO},
       {"table", Token::TABLE},
+      {"drop", Token::DROP},
       {"id", Token::TYPE_ID},
       {"string", Token::TYPE_STRING},
       {"\\*", Token::ALL_ATTRIBUTES},
