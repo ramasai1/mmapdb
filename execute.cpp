@@ -191,6 +191,21 @@ void SelectStatement::execute() {
   check_errors(close(fd) < 0, "Unable to close file after reading");
 }
 
+void DropStatement::execute() {
+  std::string metadata_file = "data/" + this->get_table_name() + ".metadata";
+  std::string db_file = "data/" + this->get_table_name() + ".db";
+
+  if (file_exists(db_file) && file_exists(metadata_file)) {
+    system(std::string("rm " + metadata_file).c_str());
+    system(std::string("rm " + db_file).c_str());
+  } else {
+    std::cout << "files for table " << this->get_table_name()
+              << " does not fully exist; table can't be dropped. please "
+                 "manually clean up files."
+              << std::endl;
+  }
+}
+
 static void inline check_errors(const bool &invalid, const std::string &msg) {
   if (invalid) {
     std::cout << msg << std::endl;

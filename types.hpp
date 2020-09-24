@@ -20,7 +20,8 @@ enum class Token {
   VALUES,
   TYPE_ID,
   TYPE_STRING,
-  COMMA
+  COMMA,
+  DROP
 };
 
 class Statement {
@@ -110,6 +111,7 @@ class SelectStatement : public Statement {
   void execute() override;
 
   std::string get_table_name() const { return table_name; }
+
   void set_table_name(const std::string &table_name) {
     this->table_name = table_name;
   }
@@ -123,6 +125,23 @@ class SelectStatement : public Statement {
   void set_select_all(const bool &select_all) { this->select_all = select_all; }
 
   const bool &get_select_all() const { return select_all; }
+};
+
+class DropStatement : public Statement {
+ public:
+  DropStatement(std::string table_name) : Statement(table_name){};
+
+  DropStatement() : Statement(""){};
+
+  ~DropStatement() override{};
+
+  void execute() override;
+
+  void set_table_name(const std::string &table_name) {
+    this->table_name = table_name;
+  }
+
+  const std::string &get_table_name() const { return table_name; }
 };
 
 #endif
