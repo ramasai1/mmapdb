@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -c -g -std=c++17 -O0
+CFLAGS = -Wall -c -g -std=c++17 -O3
 
 main: main.o parse.o execute.o lexer.o
 	$(CC) main.o parse.o execute.o lexer.o -o main
@@ -17,4 +17,4 @@ execute.o: execute.cpp execute.hpp
 	$(CC) $(CFLAGS) execute.cpp execute.hpp
 
 clean:
-	rm *.o main
+	rm *.o *.gch main

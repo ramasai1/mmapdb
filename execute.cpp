@@ -18,7 +18,7 @@ static std::map<std::string, int> get_row_layout_on_disk(const std::string &);
 
 void CreateStatement::execute() {
   int metadata_fd, table_fd;
-  std::map<std::string, std::string> &schema = this->get_mappings();
+  std::vector<std::pair<std::string, std::string>> &schema = this->get_mappings();
   int textsize = 0, mapped_idx = 0;
   std::string metadata_filename =
       "data/" + this->get_table_name() + ".metadata";
@@ -205,9 +205,8 @@ void SelectStatement::execute() {
       // check the type to see if they match. string doesn't matter because
       // everything is a string.
       if (attribute_to_type[where_filter.first] == "int") {
-        int condition;
         try {
-          condition = std::stoi(where_filter.second);
+          std::stoi(where_filter.second);
         } catch (std::invalid_argument &e) {
           throw std::invalid_argument("Wrong type comparison for " +
                                       where_filter.first);

@@ -38,15 +38,16 @@ class Statement {
 };
 
 class CreateStatement : public Statement {
-  std::map<std::string, std::string> colname_to_datatype;
+  // std::map<std::string, std::string> colname_to_datatype;
+  std::vector<std::pair<std::string, std::string>> colname_to_datatype;
 
  public:
   CreateStatement()
       : Statement(""),
-        colname_to_datatype(std::map<std::string, std::string>()){};
+        colname_to_datatype(std::vector<std::pair<std::string, std::string>>()){};
 
   CreateStatement(std::string table_name,
-                  std::map<std::string, std::string> colname_to_datatype)
+                  std::vector<std::pair<std::string, std::string>> colname_to_datatype)
       : Statement(table_name), colname_to_datatype(colname_to_datatype){};
 
   ~CreateStatement() override{};
@@ -60,10 +61,10 @@ class CreateStatement : public Statement {
   std::string get_table_name() const { return this->table_name; }
 
   void add_mapping(const std::string &colname, const std::string &datatype) {
-    colname_to_datatype[colname] = datatype;
+    colname_to_datatype.push_back(std::make_pair(colname, datatype));
   }
 
-  std::map<std::string, std::string> &get_mappings() {
+  std::vector<std::pair<std::string, std::string>> &get_mappings() {
     return colname_to_datatype;
   }
 };
