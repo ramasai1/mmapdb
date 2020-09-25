@@ -84,7 +84,7 @@ InsertStatement* Parser::parse_insert(Lexer& lexer) {
     std::vector<std::pair<std::string, Token>> tokens =
         parse_until(lexer, Token::RPAREN, Token::RPAREN);
     std::vector<std::string> tuple;
-    for (int token_idx = 0; token_idx < tokens.size(); token_idx++) {
+    for (unsigned int token_idx = 0; token_idx < tokens.size(); token_idx++) {
       std::pair<std::string, Token>& token = tokens[token_idx];
       if (token_idx % 2 != 0 && token.second != Token::COMMA) {
         throw std::invalid_argument(
