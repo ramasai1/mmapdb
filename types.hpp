@@ -18,10 +18,13 @@ enum class Token {
   RPAREN,
   LPAREN,
   VALUES,
-  TYPE_ID,
+  TYPE_INT,
   TYPE_STRING,
   COMMA,
-  DROP
+  DROP,
+  WHERE,
+  EQUAL,
+  SENTINEL
 };
 
 class Statement {
@@ -96,15 +99,23 @@ class InsertStatement : public Statement {
 class SelectStatement : public Statement {
   std::vector<std::string> attributes;
   bool select_all;
+  Token where_operator;
+  std::pair<std::string, std::string> where_filter;
 
  public:
   SelectStatement(std::string table_name, std::vector<std::string> attributes)
-      : Statement(table_name), attributes(attributes), select_all(false){};
+      : Statement(table_name),
+        attributes(attributes),
+        select_all(false),
+        where_operator(Token::SENTINEL),
+        where_filter(std::make_pair("", "")){};
 
   SelectStatement()
       : Statement(""),
         attributes(std::vector<std::string>()),
-        select_all(false){};
+        select_all(false),
+        where_operator(Token::SENTINEL),
+        where_filter(std::make_pair("", "")){};
 
   ~SelectStatement() override{};
 
@@ -125,6 +136,23 @@ class SelectStatement : public Statement {
   void set_select_all(const bool &select_all) { this->select_all = select_all; }
 
   const bool &get_select_all() const { return select_all; }
+
+  void set_where_operator(const Token &where_operator) {
+    this->where_operator = where_operator;
+  }
+
+  const Token get_where_operator() const noexcept {
+    return this->where_operator;
+  }
+
+  void set_where_filter(const std::string &attribute,
+                        const std::string &condition) {
+    this->where_filter = std::make_pair(attribute, condition);
+  }
+
+  std::pair<std::string, std::string> &get_where_filter() noexcept {
+    return this->where_filter;
+  }
 };
 
 class DropStatement : public Statement {

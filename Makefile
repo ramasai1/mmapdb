@@ -8,13 +8,13 @@ main.o: main.cpp
 	$(CC) $(CFLAGS) main.cpp
 
 lexer.o: lexer.cpp lexer.hpp
-	$(CC) $(CFLAGS) lexer.cpp
+	$(CC) $(CFLAGS) lexer.cpp lexer.hpp
 
 parse.o: parse.cpp parse.hpp types.hpp
-	$(CC) $(CFLAGS) parse.cpp
+	$(CC) $(CFLAGS) parse.cpp parse.hpp types.hpp
 
 execute.o: execute.cpp execute.hpp
-	$(CC) $(CFLAGS) execute.cpp
+	$(CC) $(CFLAGS) execute.cpp execute.hpp
 
 clean:
 	rm *.o main
