@@ -170,11 +170,20 @@ void SelectStatement::execute() {
   std::map<std::string, int> attribute_to_col_idx =
       get_row_layout_on_disk(std::string(line));
   std::vector<std::string> &desired_attributes = this->get_attributes();
+  bool broken = false;
 
   while (std::getline(db_row_stream, row)) {
     std::vector<std::string> all_attributes = tokenize(row);
     if (!select_all_rows) {
       for (auto &desired_attribute : desired_attributes) {
+        if (attribute_to_col_idx.find(desired_attribute) ==
+            attribute_to_col_idx.end()) {
+          check_errors(true, "Attribute " + desired_attribute +
+                                 " does not exist on table " +
+                                 this->get_table_name());
+          broken = true;
+          break;
+        }
         std::cout << all_attributes[attribute_to_col_idx[desired_attribute]]
                   << '\t';
       }
@@ -183,6 +192,7 @@ void SelectStatement::execute() {
         std::cout << attribute << '\t';
       }
     }
+    if (broken) break;
     std::cout << std::endl;
   }
 

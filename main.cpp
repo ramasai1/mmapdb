@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "execute.hpp"
-#include "lexer.hpp"
 #include "parse.hpp"
 
 int main() {
