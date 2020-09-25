@@ -124,7 +124,7 @@ SelectStatement* Parser::parse_select(Lexer& lexer) {
     if (token.second == Token::ALL_ATTRIBUTES) {
       stmt->set_select_all(true);
     }
-    if (token.second != Token::COMMA) {
+    if (token.second != Token::COMMA && !stmt->get_select_all()) {
       attributes.push_back(token.first);
     }
   }
@@ -141,6 +141,28 @@ SelectStatement* Parser::parse_select(Lexer& lexer) {
         "expected table name at the end of the statement");
   }
   stmt->set_table_name(token.first);
+  // Parse the `where...` part if it exists.
+  if (lexer.has_next_token()) {
+    token = lexer.get_curr_token();
+    if (token.second != Token::WHERE) {
+      throw std::invalid_argument(
+          "Malformed query, expecting where or nothing after table name.");
+    }
+    token = lexer.get_curr_token();
+    if (token.second != Token::IDENTIFIER) {
+      throw std::invalid_argument(
+          "Malformed query, using restricted keywords in the where query");
+    }
+    std::string attribute = token.first;
+    token = lexer.get_curr_token();
+    stmt->set_where_operator(token.second);
+    if (!lexer.has_next_token()) {
+      throw std::invalid_argument(
+          "Malformed query, where condition is not properly specified.");
+    }
+    token = lexer.get_curr_token();
+    stmt->set_where_filter(attribute, token.first);
+  }
 
   return stmt;
 }

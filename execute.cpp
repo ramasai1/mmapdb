@@ -13,7 +13,7 @@
 static void inline check_errors(const bool &, const std::string &);
 static bool file_exists(const std::string &);
 static int inline round_down_to_pagesize(const int &);
-static std::vector<std::string> tokenize(const std::string &);
+static std::vector<std::string> tokenize(const std::string &, char delim);
 static std::map<std::string, int> get_row_layout_on_disk(const std::string &);
 
 void CreateStatement::execute() {
@@ -144,13 +144,29 @@ void SelectStatement::execute() {
   struct stat db_fileinfo;
   char *mapped, *line;
   FILE *stream;
+  std::map<std::string, std::string> attribute_to_type;
+  std::string row_layout;
+  bool collected_layout = false;
 
   // get order of row layout on disk.
   fd = open(metadata_filename.c_str(), O_RDONLY);
   check_errors(fd < 0, "Unable to open metadata file to get row layout.");
   stream = fdopen(fd, "r");
   check_errors(stream == NULL, "Unable to open stream to read metadata");
-  getline(&line, &sz, stream);
+
+  while (getline(&line, &sz, stream) != -1) {
+    if (!collected_layout) {
+      row_layout = std::string(line);
+    }
+    if (this->get_where_operator() == Token::SENTINEL) {
+      // not going to read metadata file if there is no where filter specified.
+      break;
+    } else if (collected_layout) {
+      std::vector<std::string> tokens = tokenize(line, ':');
+      attribute_to_type[tokens[0]] = tokens[1];
+    }
+    collected_layout = true;
+  }
   check_errors(fclose(stream) == EOF,
                "Unable to close stream after reading row layout");
 
@@ -168,12 +184,43 @@ void SelectStatement::execute() {
   std::string row;
   bool select_all_rows = this->get_select_all();
   std::map<std::string, int> attribute_to_col_idx =
-      get_row_layout_on_disk(std::string(line));
+      get_row_layout_on_disk(row_layout);
   std::vector<std::string> &desired_attributes = this->get_attributes();
   bool broken = false;
+  std::vector<std::vector<std::string>> output_rows;
+  std::pair<std::string, std::string> &where_filter = this->get_where_filter();
 
   while (std::getline(db_row_stream, row)) {
-    std::vector<std::string> all_attributes = tokenize(row);
+    std::vector<std::string> all_attributes = tokenize(row, ',');
+    if (this->get_where_operator() == Token::SENTINEL) {
+      output_rows.push_back(all_attributes);
+    } else {
+      // check if attribute on which we're filtering exists.
+      if (attribute_to_col_idx.find(where_filter.first) ==
+          attribute_to_col_idx.end()) {
+        throw std::invalid_argument(
+            "calling where on an invalid attribute on " +
+            this->get_table_name());
+      }
+      // check the type to see if they match. string doesn't matter because
+      // everything is a string.
+      if (attribute_to_type[where_filter.first] == "int") {
+        int condition;
+        try {
+          condition = std::stoi(where_filter.second);
+        } catch (std::invalid_argument &e) {
+          throw std::invalid_argument("Wrong type comparison for " +
+                                      where_filter.first);
+        }
+      }
+      // check if the value actually matches.
+      if (all_attributes[attribute_to_col_idx[where_filter.first]] ==
+          where_filter.second) {
+        output_rows.push_back(all_attributes);
+      }
+    }
+  }
+  for (auto &output_row : output_rows) {
     if (!select_all_rows) {
       for (auto &desired_attribute : desired_attributes) {
         if (attribute_to_col_idx.find(desired_attribute) ==
@@ -184,11 +231,11 @@ void SelectStatement::execute() {
           broken = true;
           break;
         }
-        std::cout << all_attributes[attribute_to_col_idx[desired_attribute]]
+        std::cout << output_row[attribute_to_col_idx[desired_attribute]]
                   << '\t';
       }
     } else {
-      for (auto &attribute : all_attributes) {
+      for (auto &attribute : output_row) {
         std::cout << attribute << '\t';
       }
     }
@@ -245,16 +292,15 @@ static std::map<std::string, int> get_row_layout_on_disk(
   int idx = 0;
   std::map<std::string, int> attribute_to_col_idx;
 
-  for (auto &token : tokenize(layout)) {
+  for (auto &token : tokenize(layout, ',')) {
     attribute_to_col_idx[token] = idx++;
   }
 
   return attribute_to_col_idx;
 }
 
-static std::vector<std::string> tokenize(const std::string &str) {
+static std::vector<std::string> tokenize(const std::string &str, char delim) {
   std::stringstream ss(str);
-  char delim = ',';
   std::string token;
   std::vector<std::string> tokens;
 
